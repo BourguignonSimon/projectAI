@@ -27,14 +27,15 @@ ROLES_CONFIG = {
     ROLE: Auditor.
     OUTPUT: "VALIDATED" if good. Bullet list of fixes if bad.
     CONSTRAINTS: Strict.
-    """
+    """,
 }
+
 
 def run_agent(role):
     print(f"👤 AGENT {role.upper()} (SILENT MODE)")
     system_prompt = ROLES_CONFIG.get(role, "")
     my_tag = f"@{role.capitalize()}"
-    last_id = '$'
+    last_id = "$"
 
     while True:
         try:
@@ -43,21 +44,21 @@ def run_agent(role):
                 stream, msgs = messages[0]
                 last_id = msgs[0][0]
                 data = msgs[0][1]
-                
-                sender = data.get('sender', '')
-                content = data.get('content', '')
-                req_id = data.get('request_id')
-                status = data.get('status', 'DONE')
 
-                if sender != role and my_tag in content and req_id and status == 'DONE':
+                sender = data.get("sender", "")
+                content = data.get("content", "")
+                req_id = data.get("request_id")
+                status = data.get("status", "DONE")
+
+                if sender != role and my_tag in content and req_id and status == "DONE":
                     print(f"⚡ [{role}] Processing...")
-                    
+
                     if role == "reviewer":
                         context = f"CODE:\n{content}\nROLE:{system_prompt}"
                     else:
                         smart = build_smart_context(req_id)
                         context = f"CTX:\n{smart}\nIN:\n{content}\nROLE:{system_prompt}"
-                    
+
                     response = get_ai_response(role, content, context)
                     msg_type = "code" if role == "coder" else "data"
 
@@ -66,6 +67,7 @@ def run_agent(role):
         except Exception as e:
             print(f"Err {role}: {e}")
             time.sleep(1)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
