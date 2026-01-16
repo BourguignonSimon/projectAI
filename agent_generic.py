@@ -1,6 +1,7 @@
 import argparse
 import time
-from utils import r, STREAM_KEY, publish_message, get_ai_response, build_smart_context
+
+from utils import STREAM_KEY, build_smart_context, get_ai_response, publish_message, r
 
 ROLES_CONFIG = {
     "analyst": """
