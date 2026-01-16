@@ -1,6 +1,7 @@
 import os
 import time
-from utils import r, STREAM_KEY, publish_message
+
+from utils import STREAM_KEY, publish_message, r
 
 C_MGR, C_USR = "\033[94m", "\033[97m"
 C_ANL, C_ARC = "\033[96m", "\033[95m"
