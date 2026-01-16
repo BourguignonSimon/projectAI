@@ -1,9 +1,10 @@
-import time
-import uuid
+import json
 import os
 import re
-import json
-from utils import r, STREAM_KEY, publish_message, get_ai_response, build_smart_context
+import time
+import uuid
+
+from utils import STREAM_KEY, build_smart_context, get_ai_response, publish_message, r
 
 
 def get_last_coder_content(request_id):

@@ -1,6 +1,7 @@
 """Tests for utility functions."""
 
 import os
+
 import pytest
 
 
