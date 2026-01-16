@@ -65,12 +65,12 @@ def decide_next_step(sender, content, request_id):
         decision = json.loads(clean_json)
         return decision["target"], decision["instruction"]
     except (json.JSONDecodeError, KeyError, TypeError) as e:
-        print(f"Decision parsing error: {e}")
+        print(f"Decision parsing error: {e}", flush=True)
         return "@Analyst", "Analyze status."
 
 
 def run_manager():
-    print("🤖 MANAGER (MODE INDUSTRIEL)")
+    print("🤖 MANAGER (MODE INDUSTRIEL)", flush=True)
     last_id = "$"
 
     while True:
@@ -90,7 +90,7 @@ def run_manager():
 
                 if sender == "user" and not req_id:
                     new_guid = str(uuid.uuid4())
-                    print(f"✨ NEW JOB: {new_guid}")
+                    print(f"✨ NEW JOB: {new_guid}", flush=True)
                     publish_message(
                         "manager",
                         f"EXECUTE: {data['content']}",
@@ -109,10 +109,10 @@ def run_manager():
                             "manager", f"DONE. Files: {len(files)}", "end", req_id, status="DONE"
                         )
                     else:
-                        print(f"👉 {target}")
+                        print(f"👉 {target}", flush=True)
                         publish_message("manager", instruction, "cmd", req_id, status="DONE")
         except Exception as e:
-            print(f"Err: {e}")
+            print(f"Err: {e}", flush=True)
             time.sleep(1)
 
 

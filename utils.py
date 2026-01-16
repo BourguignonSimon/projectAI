@@ -80,7 +80,7 @@ def compress_history(current_summary, new_messages_text):
     try:
         return model.generate_content(prompt).text
     except Exception as e:
-        print(f"Compression error: {e}")
+        print(f"Compression error: {e}", flush=True)
         return current_summary
 
 

@@ -33,7 +33,7 @@ ROLES_CONFIG = {
 
 
 def run_agent(role):
-    print(f"👤 AGENT {role.upper()} (SILENT MODE)")
+    print(f"👤 AGENT {role.upper()} (SILENT MODE)", flush=True)
     system_prompt = ROLES_CONFIG.get(role, "")
     my_tag = f"@{role.capitalize()}"
     last_id = "$"
@@ -52,7 +52,7 @@ def run_agent(role):
                 status = data.get("status", "DONE")
 
                 if sender != role and my_tag in content and req_id and status == "DONE":
-                    print(f"⚡ [{role}] Processing...")
+                    print(f"⚡ [{role}] Processing...", flush=True)
 
                     if role == "reviewer":
                         context = f"CODE:\n{content}\nROLE:{system_prompt}"
@@ -64,9 +64,9 @@ def run_agent(role):
                     msg_type = "code" if role == "coder" else "data"
 
                     publish_message(role, response, msg_type, req_id, status="DONE")
-                    print(f"✅ [{role}] Sent.")
+                    print(f"✅ [{role}] Sent.", flush=True)
         except Exception as e:
-            print(f"Err {role}: {e}")
+            print(f"Err {role}: {e}", flush=True)
             time.sleep(1)
 
 
