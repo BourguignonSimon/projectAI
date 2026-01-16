@@ -8,6 +8,12 @@ from datetime import datetime
 
 load_dotenv()
 
+# Environment variable validation
+REQUIRED_ENV_VARS = ['REDIS_HOST', 'REDIS_PORT', 'GOOGLE_API_KEY', 'MODEL_SMART', 'MODEL_FAST']
+missing_vars = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
+if missing_vars:
+    raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
 r = redis.Redis(host=os.getenv('REDIS_HOST'), port=int(os.getenv('REDIS_PORT')), decode_responses=True)
 STREAM_KEY = "table_ronde_stream"
 
@@ -64,7 +70,8 @@ def compress_history(current_summary, new_messages_text):
     """
     try:
         return model.generate_content(prompt).text
-    except:
+    except Exception as e:
+        print(f"Compression error: {e}")
         return current_summary
 
 def build_smart_context(request_id):

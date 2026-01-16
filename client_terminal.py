@@ -24,11 +24,11 @@ def listener(last_id='$'):
                 for msg in messages[0][1]:
                     last_id = msg[0]
                     data = msg[1]
-                    sender = data['sender']
+                    sender = data.get('sender', '')
                     if sender == 'user': continue
-                    
+
                     color = get_color(sender)
-                    clean = data['content'].replace("\n", "\n│  ")
+                    clean = data.get('content', '').replace("\n", "\n│  ")
                     print(f"{color}┌─ [{sender.upper()}]")
                     print(f"│  {clean}")
                     print(f"└──────────────────────────────────────────────────{C_RST}")

@@ -5,6 +5,16 @@ import re
 import json
 from utils import r, STREAM_KEY, publish_message, get_ai_response, build_smart_context
 
+def get_last_coder_content(request_id):
+    """Retrieve the last coder message content from the stream for a given request."""
+    if not request_id:
+        return ""
+    messages = r.xrevrange(STREAM_KEY, count=100)
+    for msg_id, data in messages:
+        if data.get('request_id') == request_id and data.get('sender') == 'coder':
+            return data.get('content', '')
+    return ""
+
 def save_artifacts(content, request_id):
     pattern = r"```python(.*?)```"
     matches = re.findall(pattern, content, re.DOTALL)
@@ -48,7 +58,8 @@ def decide_next_step(sender, content, request_id):
         clean_json = response.replace("```json", "").replace("```", "").strip()
         decision = json.loads(clean_json)
         return decision['target'], decision['instruction']
-    except:
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        print(f"Decision parsing error: {e}")
         return "@Analyst", "Analyze status."
 
 def run_manager():
@@ -63,7 +74,7 @@ def run_manager():
                 last_id = msgs[0][0]
                 data = msgs[0][1]
                 
-                sender = data['sender']
+                sender = data.get('sender', '')
                 req_id = data.get('request_id')
                 status = data.get('status', 'DONE')
 
@@ -78,7 +89,8 @@ def run_manager():
                     target, instruction = decide_next_step(sender, data['content'], req_id)
 
                     if target == "FINISH":
-                        files = save_artifacts(data['content'], req_id)
+                        coder_content = get_last_coder_content(req_id)
+                        files = save_artifacts(coder_content, req_id)
                         publish_message('manager', f"DONE. Files: {len(files)}", "end", req_id, status="DONE")
                     else:
                         print(f"👉 {target}")

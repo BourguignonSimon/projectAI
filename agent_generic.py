@@ -44,8 +44,8 @@ def run_agent(role):
                 last_id = msgs[0][0]
                 data = msgs[0][1]
                 
-                sender = data['sender']
-                content = data['content']
+                sender = data.get('sender', '')
+                content = data.get('content', '')
                 req_id = data.get('request_id')
                 status = data.get('status', 'DONE')
 
