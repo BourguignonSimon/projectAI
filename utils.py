@@ -10,6 +10,7 @@ load_dotenv()
 
 # Environment variable validation
 REQUIRED_ENV_VARS = ["REDIS_HOST", "REDIS_PORT", "GOOGLE_API_KEY", "MODEL_SMART", "MODEL_FAST"]
+OPTIONAL_ENV_VARS = ["REDIS_ROUTING_PORT"]  # Optional: defaults to 6381 for routing
 missing_vars = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
 if missing_vars:
     raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
