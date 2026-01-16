@@ -5,6 +5,14 @@ import time
 import uuid
 
 from utils import STREAM_KEY, build_smart_context, get_ai_response, publish_message, r
+from routing import (
+    determine_next_agent,
+    register_routing_decision,
+    get_workflow_state,
+    publish_routing_decision,
+    check_routing_connection,
+    AGENT_REGISTRY,
+)
 
 
 def get_last_coder_content(request_id):
@@ -34,43 +42,106 @@ def save_artifacts(content, request_id):
 
 
 def decide_next_step(sender, content, request_id):
+    """
+    Enhanced routing decision using the routing module.
+
+    This function uses both rule-based routing and AI-assisted routing
+    to determine the next agent in the workflow.
+    """
+    # Quick check for validation completion
     if sender == "reviewer" and "VALIDATED" in content:
+        # Log the routing decision to the routing stream
+        register_routing_decision(
+            request_id=request_id,
+            source=sender,
+            target="finish",
+            content_summary=content[:100]
+        )
         return "FINISH", "OK"
 
+    # Get workflow state for context
+    workflow_state = get_workflow_state(request_id)
+
+    # First, try rule-based routing for deterministic flow
+    rule_target, rule_reason = determine_next_agent(sender, content)
+
+    # Build context for AI-assisted routing decision
     smart_context = build_smart_context(request_id)
 
-    system_prompt = """
-    ROLE: Workflow Logic Router.
-    GOAL: Move ticket to next stage.
-    STATES: 
-    1. User Input -> @Analyst (Get Specs)
-    2. Specs -> @Architect (Get Plan)
-    3. Plan -> @Coder (Get Code)
-    4. Code -> @Reviewer (Audit)
-    5. Review Fail -> @Coder (Fix)
+    # Get available agents information for the AI
+    agents_info = "\n".join([
+        f"- @{name.capitalize()}: {info['description']}"
+        for name, info in AGENT_REGISTRY.items()
+    ])
+
+    system_prompt = f"""
+    ROLE: Intelligent Workflow Router.
+    GOAL: Route the request to the most appropriate agent.
+
+    AVAILABLE AGENTS:
+    {agents_info}
+
+    WORKFLOW STATE:
+    - Current Stage: {workflow_state.get('stage', 'initial')}
+    - Agents Involved: {', '.join(workflow_state.get('participating_agents', []))}
+    - Decision Count: {workflow_state.get('decision_count', 0)}
+
+    ROUTING RULES:
+    1. User Input -> @Analyst (Extract Requirements)
+    2. Specifications -> @Architect (Design System)
+    3. Architecture -> @Coder (Implement Code)
+    4. Code -> @Reviewer (Quality Audit)
+    5. Review Fail -> @Coder (Fix Issues)
     6. Review Pass -> FINISH
-    
-    OUTPUT: JSON {"target": "@Role", "instruction": "Direct Command"}
+
+    SUGGESTED ROUTE: {rule_target} - {rule_reason}
+
+    OUTPUT: JSON {{"target": "@Role", "instruction": "Direct Command for the agent"}}
     """
 
     user_prompt = f"""
     STATE: {smart_context}
-    LAST_EVENT: {sender} sent data.
-    NEXT STEP?
+    LAST_EVENT: {sender} completed their task.
+    DETERMINE NEXT STEP.
     """
 
     try:
         response = get_ai_response("manager", user_prompt, system_prompt)
         clean_json = response.replace("```json", "").replace("```", "").strip()
         decision = json.loads(clean_json)
-        return decision["target"], decision["instruction"]
+        target = decision["target"]
+        instruction = decision["instruction"]
+
+        # Register the routing decision
+        register_routing_decision(
+            request_id=request_id,
+            source=sender,
+            target=target.replace("@", "").lower(),
+            content_summary=content[:100] if content else ""
+        )
+
+        return target, instruction
     except (json.JSONDecodeError, KeyError, TypeError) as e:
-        print(f"Decision parsing error: {e}")
-        return "@Analyst", "Analyze status."
+        print(f"Decision parsing error: {e}, using rule-based routing")
+        # Fallback to rule-based routing
+        formatted_target = register_routing_decision(
+            request_id=request_id,
+            source=sender,
+            target=rule_target,
+            content_summary=content[:100] if content else ""
+        )
+        return formatted_target, f"Process the input from {sender}"
 
 
 def run_manager():
-    print("🤖 MANAGER (MODE INDUSTRIEL)")
+    print("MANAGER (INDUSTRIAL MODE)")
+
+    # Check routing Redis connection
+    if check_routing_connection():
+        print("Routing Redis (port 6381): Connected")
+    else:
+        print("Warning: Routing Redis (port 6381) not available, using fallback routing")
+
     last_id = "$"
 
     while True:
@@ -90,7 +161,7 @@ def run_manager():
 
                 if sender == "user" and not req_id:
                     new_guid = str(uuid.uuid4())
-                    print(f"✨ NEW JOB: {new_guid}")
+                    print(f"[NEW JOB] {new_guid}")
                     publish_message(
                         "manager",
                         f"EXECUTE: {data['content']}",
@@ -109,7 +180,7 @@ def run_manager():
                             "manager", f"DONE. Files: {len(files)}", "end", req_id, status="DONE"
                         )
                     else:
-                        print(f"👉 {target}")
+                        print(f"[ROUTING] -> {target}")
                         publish_message("manager", instruction, "cmd", req_id, status="DONE")
         except Exception as e:
             print(f"Err: {e}")
