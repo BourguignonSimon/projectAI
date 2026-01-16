@@ -59,8 +59,11 @@ def main():
                 break
             if not u_in.strip():
                 continue
+            # Get current stream position BEFORE publishing to avoid race condition
+            stream_info = r.xinfo_stream(STREAM_KEY) if r.exists(STREAM_KEY) else None
+            last_id = stream_info.get("last-generated-id", "0-0") if stream_info else "0-0"
             publish_message("user", u_in, "order", status="DONE")
-            listener(last_id="$")
+            listener(last_id=last_id)
         except KeyboardInterrupt:
             break
 
